@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import json
 import uuid
+import shutil
 
 
 def load_images(folder):
@@ -148,16 +149,43 @@ def visualize_annotations(image_path, annotation_path):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
-                           "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
-                           "D:/Proyectos/Pokemon_TCG_Scanner/datasets/dataset_sintetico", 
-                           100)
+def split_dataset(splits, path, class_names):
+    assert sum([splits[s] for s in splits]) == 1.0
+    os.makedirs(os.path.join(path, 'splited_dataset'), exist_ok=True)
+    names = os.listdir(os.path.join(path, 'images'))
+    random.seed(0)
+    random.shuffle(names)
+    last = 0
+    splits_rows = []
+    for split in splits:
+        splits_rows.append(f'{split}: {os.path.join(path, 'splited_dataset', split, 'images')}     # {split} images\n')
+        os.makedirs(os.path.join(path, 'splited_dataset', split), exist_ok=True)
+        os.makedirs(os.path.join(path, 'splited_dataset', split, 'images'), exist_ok=True)
+        os.makedirs(os.path.join(path, 'splited_dataset', split, 'labels'), exist_ok=True)
+        for i in range(last, int(splits[split] * len(names)) + last):
+            shutil.copy(os.path.join(path, 'images', names[i]), os.path.join(path, 'splited_dataset', split, 'images', names[i]))
+            shutil.copy(os.path.join(path, 'labels', names[i].split('.')[0] + '.txt'), os.path.join(path, 'splited_dataset', split, 'labels', names[i].split('.')[0] + '.txt'))
+        last = int(splits[split] * len(names))
 
-convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/dataset_sintetico/annotations", 
-                     "D:/Proyectos/Pokemon_TCG_Scanner/datasets/dataset_sintetico/labels", 
-                     mode="segmentation")
-"""
-example = 'cf6e80387fe8498b901c846234479eb5'
-visualize_annotations(f'D:/Proyectos/Pokemon_TCG_Scanner/datasets/dataset_sintetico/images/{example}.jpg', 
-                           f'D:/Proyectos/Pokemon_TCG_Scanner/datasets/dataset_sintetico/annotations/{example}.json')
-"""
+    formatted_names = "\n" + "\n".join([f"  {i}: {name}" for i, name in enumerate(class_names)])
+    splits_path = "".join(splits_rows)
+    yaml_file = """{}\nis_coco: False\n\n# Classes\nnames:{}""".format(splits_path, formatted_names)
+    with open(os.path.join(path, 'splited_dataset','data.yaml'), 'w') as file1:
+        file1.write(yaml_file)
+        
+
+if __name__ == "__main__":
+
+    generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
+                            "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
+                            "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset", 
+                            1300)
+
+    convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/annotations", 
+                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/labels", 
+                        mode="segmentation")
+
+    split_dataset({'train': 0.6, 'val': 0.2, 'test': 0.2}, 
+                  'D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset',
+                  ['card'])
+    
