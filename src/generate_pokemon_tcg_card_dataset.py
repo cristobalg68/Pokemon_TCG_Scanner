@@ -85,7 +85,7 @@ def creation_db_cards(dir):
                         with open(os.path.join(dir, 'log.json'), 'w') as file:
                             json.dump(log_data, file, indent=4)
 
-                    for card in tqdm(set['cards'], desc="Procesando cartas")
+                    for card in tqdm(set['cards'], desc="Procesando cartas"):
                         card_id = card['id']
                         response_3 = requests.get(f'https://api.tcgdex.net/v2/en/cards/{card_id}', headers='')
                         if response_3.status_code == 200:
@@ -313,8 +313,8 @@ def add_hash_column(dir, save_per=100):
     with open(log_path, 'w') as file:
         json.dump(log_data, file, indent=4)
 
-#creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
 
-#solve_errors('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+solve_errors('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
 
 add_hash_column('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
