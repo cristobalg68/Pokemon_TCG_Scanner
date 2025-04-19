@@ -98,6 +98,7 @@ def place_cards_on_background(background, cards, margin=20):
 
 def generate_synthetic_dataset(bg_folder, card_folder, output_folder, P):
     backgrounds, cards = load_images(bg_folder), load_images(card_folder)
+    os.makedirs(f"{output_folder}", exist_ok=True)
     os.makedirs(f"{output_folder}/images", exist_ok=True)
     os.makedirs(f"{output_folder}/annotations", exist_ok=True)
     os.makedirs(f"{output_folder}/masks", exist_ok=True)
@@ -213,16 +214,18 @@ def simplify_all_segmentations(label_dir, tolerance=0.001):
             file.write('\n'.join(simplified_lines))
         
 if __name__ == "__main__":
+    output_folder = "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset"
+    
     generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
                             "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
-                            "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset", 
-                            5000)
+                            output_folder, 
+                            1500)
     
-    convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/annotations", 
-                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/labels", 
+    convert_coco_to_yolo(f"{output_folder}/annotations", 
+                        f"{output_folder}/labels", 
                         mode="segmentation")
 
     split_dataset({'train': 0.8, 'val': 0.1, 'test': 0.1}, 
-                  'D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset',
+                  output_folder,
                   ['card'])
     
