@@ -85,11 +85,7 @@ def creation_db_cards(dir):
                         with open(os.path.join(dir, 'log.json'), 'w') as file:
                             json.dump(log_data, file, indent=4)
 
-                    total_cards = len(set['cards'])
-                    k = 0
-                    for card in set['cards']:
-                        msn = f'Card {k + 1} / {total_cards} is being extracted from set {set_name}.'
-                        print_clear(msn)
+                    for card in tqdm(set['cards'], desc="Procesando cartas")
                         card_id = card['id']
                         response_3 = requests.get(f'https://api.tcgdex.net/v2/en/cards/{card_id}', headers='')
                         if response_3.status_code == 200:
@@ -132,7 +128,6 @@ def creation_db_cards(dir):
                             log_data['error_with_a_card'].append((set_id, card_id))
                             with open(os.path.join(dir, 'log.json'), 'w') as file:
                                 json.dump(log_data, file, indent=4)
-                        k += 1
                                 
                     log_data['completed_set'].append(set_id)
                     with open(os.path.join(dir, 'log.json'), 'w') as file:
@@ -318,8 +313,8 @@ def add_hash_column(dir, save_per=100):
     with open(log_path, 'w') as file:
         json.dump(log_data, file, indent=4)
 
-creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+#creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
 
-solve_errors('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+#solve_errors('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
 
 add_hash_column('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
