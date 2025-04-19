@@ -3,10 +3,16 @@ import requests
 import os
 import json
 import re
+import sys
 
 def sanitize_filename(filename):
     invalid_chars = r'[<>:"/\\|?*\x00-\x1F]'
     return re.sub(invalid_chars, '_', filename)
+
+def print_clear(msn):
+    sys.stdout.write("\r" + " " * 50)
+    sys.stdout.write("\r" + msn)
+    sys.stdout.flush()
 
 def creation_db_cards(dir):
 
@@ -78,7 +84,7 @@ def creation_db_cards(dir):
                     k = 0
                     for card in set['cards']:
                         msn = f'Card {k + 1} / {total_cards} is being extracted from set {set_name}.'
-                        print(msn, end='\r')                                                           ################### arreglar esto
+                        print_clear(msn)
                         card_id = card['id']
                         response_3 = requests.get(f'https://api.tcgdex.net/v2/en/cards/{card_id}', headers='')
                         if response_3.status_code == 200:
