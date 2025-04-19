@@ -4,6 +4,11 @@ import os
 import json
 import re
 import sys
+import imagehash
+from PIL import Image
+from io import BytesIO
+from tqdm import tqdm
+
 
 def sanitize_filename(filename):
     invalid_chars = r'[<>:"/\\|?*\x00-\x1F]'
@@ -258,6 +263,63 @@ def solve_errors(dir):
     with open(os.path.join(dir, 'log.json'), 'w') as file:
         json.dump(log_data, file, indent=4)
 
-#creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+def hash_image(img, hash_size):
+    img = img.convert('RGB')
+    dhash = imagehash.dhash(img, hash_size)
+    phash = imagehash.phash(img, hash_size)
+
+    return f'{dhash}{phash}'
+
+def add_hash_column(dir, save_per=100):
+    log_path = os.path.join(dir, 'log.json')
+    with open(log_path, 'r') as file:
+        log_data = json.load(file)
+
+    last_index = log_data["last_saved_index"]
+
+    file_path = os.path.join(dir, 'cards_of_pokemon.xlsx')
+    df = pd.read_excel(file_path)
+
+    if 'hash' not in df.columns:
+        df['hash'] = None
+
+    count_since_last_save = 0
+    for index in tqdm(range(last_index, len(df)), initial=last_index, desc="Procesando imágenes"):
+        row = df.iloc[index]
+        if pd.notna(row['hash']):
+            continue
+
+        url = row['Image_Card_URL']
+
+        if pd.isna(url):
+            df.at[index, 'hash'] = None
+        else:
+            try:
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                img = Image.open(BytesIO(response.content))
+                hash_val = hash_image(img, 16)
+                df.at[index, 'hash'] = hash_val
+            except Exception as e:
+                print(f"Error en fila {index} con URL '{url}': {e}")
+                df.at[index, 'hash'] = None
+
+        count_since_last_save += 1
+
+        if count_since_last_save >= save_per:
+            df.to_excel(file_path, index=False)
+            log_data['last_saved_index'] = index
+            with open(log_path, 'w') as file:
+                json.dump(log_data, file, indent=4)
+            count_since_last_save = 0
+
+    df.to_excel(file_path, index=False)
+    log_data['last_saved_index'] = len(df)
+    with open(log_path, 'w') as file:
+        json.dump(log_data, file, indent=4)
+
+creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
 
 solve_errors('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+
+add_hash_column('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
