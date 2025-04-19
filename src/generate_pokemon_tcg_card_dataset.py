@@ -143,4 +143,121 @@ def creation_db_cards(dir):
                     with open(os.path.join(dir, 'log.json'), 'w') as file:
                         json.dump(log_data, file, indent=4)
 
-creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+def solve_errors(dir):
+    with open(os.path.join(dir, 'log.json')) as file:
+        log_data = json.load(file)
+
+    # Error with a symbol set
+    errors = []
+    for error in log_data["error_with_a_symbol_set"]:
+        response = requests.get(f'https://api.tcgdex.net/v2/en/sets/{error}', headers='')
+        if response.status_code == 200:
+            set = response.json()
+            safe_filename = sanitize_filename(f'{set_name}.png')
+
+            if 'symbol' in set:
+                image_symbol_url = set['symbol'] + '.png'
+                response = requests.get(image_symbol_url)
+                if response.status_code == 200:
+                    with open(os.path.join(dir, 'images', 'symbols', safe_filename), 'wb') as f:
+                        f.write(response.content)
+                else:
+                    errors.append(error)
+    
+    log_data["error_with_a_symbol_set"] = errors
+    with open(os.path.join(dir, 'log.json'), 'w') as file:
+        json.dump(log_data, file, indent=4)
+
+    # Error with a logo set
+    errors = []
+    for error in log_data["error_with_a_logo_set"]:
+        response = requests.get(f'https://api.tcgdex.net/v2/en/sets/{error}', headers='')
+        if response.status_code == 200:
+            set = response.json()
+            safe_filename = sanitize_filename(f'{set_name}.png')
+
+            if 'logo' in set:
+                image_logo_url = set['logo'] + '.png'
+                response = requests.get(image_logo_url)
+                if response.status_code == 200:
+                    with open(os.path.join(dir, 'images', 'logos', safe_filename), 'wb') as f:
+                        f.write(response.content)
+                else:
+                    errors.append(error)
+    
+    log_data["error_with_a_logo_set"] = errors
+    with open(os.path.join(dir, 'log.json'), 'w') as file:
+        json.dump(log_data, file, indent=4)
+
+    list_cards = []
+
+    # Error with a card
+    errors = []
+    for error in log_data["error_with_a_card"]:
+        card_id = error[1]
+        response = requests.get(f'https://api.tcgdex.net/v2/en/cards/{card_id}', headers='')
+        if response.status_code == 200:
+            info_card = response.json()
+            if 'image' in info_card:
+                image_card_url = info_card['image'] + '/high.png'
+                card_local_id = info_card['localId']
+                card_name = info_card['name']
+                set_name = info_card['set']['name']
+                response = requests.get(image_card_url)
+                if response.status_code == 200:
+                    safe_filename = sanitize_filename(f'{set_name}_{card_local_id}_{card_name}.png')
+                    with open(os.path.join(dir, 'images', 'cards', safe_filename), 'wb') as f:
+                        f.write(response.content)
+                    list_cards.append({
+                                'ID': card_id, 
+                                'Local_ID': card_local_id, 
+                                'Set_ID': info_card['set']['id'],
+                                'Set_Name': set_name,
+                                'Name': card_name, 
+                                'Rarity': info_card['rarity'],
+                                'Firt_Edition': int(info_card['variants']['firstEdition']),
+                                'Holo': int(info_card['variants']['holo']),
+                                'Normal': int(info_card['variants']['normal']),
+                                'Reverse': int(info_card['variants']['reverse']),
+                                'Promo': int(info_card['variants']['wPromo']),
+                                'Image_Card_URL': image_card_url,
+                                })
+                else:
+                    errors.append(error)
+
+    log_data["error_with_a_card"] = errors
+    with open(os.path.join(dir, 'log.json'), 'w') as file:
+        json.dump(log_data, file, indent=4)
+
+    old_df = pd.read_excel(os.path.join(dir, 'cards_of_pokemon.xlsx'))
+    new_df = pd.DataFrame(list_cards)
+    df = pd.concat([old_df, new_df])
+    df.to_excel(os.path.join(dir, 'cards_of_pokemon.xlsx'), index=False)
+
+    # Error with a image card
+    errors = []
+    for error in log_data["error_with_a_image_card"]:
+        card_id = error[1]
+        response = requests.get(f'https://api.tcgdex.net/v2/en/cards/{card_id}', headers='')
+        if response.status_code == 200:
+            info_card = response.json()
+            if 'image' in info_card:
+                image_card_url = info_card['image'] + '/high.png'
+                card_local_id = info_card['localId']
+                card_name = info_card['name']
+                set_name = info_card['set']['name']
+                response = requests.get(image_card_url)
+                if response.status_code == 200:
+                    safe_filename = sanitize_filename(f'{set_name}_{card_local_id}_{card_name}.png')
+                    with open(os.path.join(dir, 'images', 'cards', safe_filename), 'wb') as f:
+                        f.write(response.content)
+                else:
+                    errors.append(error)
+
+    log_data["error_with_a_image_card"] = errors
+    with open(os.path.join(dir, 'log.json'), 'w') as file:
+        json.dump(log_data, file, indent=4)
+
+#creation_db_cards('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
+
+solve_errors('D:/Proyectos/Pokemon_TCG_Scanner/datasets')
