@@ -6,6 +6,7 @@ import json
 import uuid
 import shutil
 from shapely.geometry import Polygon
+from tqdm import tqdm
 
 
 def load_images(folder):
@@ -101,7 +102,7 @@ def generate_synthetic_dataset(bg_folder, card_folder, output_folder, P):
     os.makedirs(f"{output_folder}/annotations", exist_ok=True)
     os.makedirs(f"{output_folder}/masks", exist_ok=True)
     
-    for i in range(P):
+    for i in tqdm(range(P), desc="Creating Images"):
         bg, selected_cards = random.choice(backgrounds), random.sample(cards, random.randint(1, min(5, len(cards))))
         img, annotations, mask, w_image, h_image = place_cards_on_background(bg, selected_cards)
 
@@ -164,7 +165,7 @@ def split_dataset(splits, path, class_names):
         os.makedirs(os.path.join(path, 'splited_dataset', split), exist_ok=True)
         os.makedirs(os.path.join(path, 'splited_dataset', split, 'images'), exist_ok=True)
         os.makedirs(os.path.join(path, 'splited_dataset', split, 'labels'), exist_ok=True)
-        for i in range(last, int(splits[split] * len(names)) + last):
+        for i in tqdm(range(last, int(splits[split] * len(names)) + last), desc=f"Creating Split - {split}"):
             shutil.copy(os.path.join(path, 'images', names[i]), os.path.join(path, 'splited_dataset', split, 'images', names[i]))
             shutil.copy(os.path.join(path, 'labels', names[i].split('.')[0] + '.txt'), os.path.join(path, 'splited_dataset', split, 'labels', names[i].split('.')[0] + '.txt'))
         last = int(splits[split] * len(names))
@@ -188,8 +189,8 @@ def simplify_segmentation(points, tolerance):
     simplified_coords = np.array(simplified.exterior.coords[:-1])
     return simplified_coords.flatten().tolist()
 
-def simplify_all_segmentations(label_dir, tolerance=0.01):
-    for fname in os.listdir(label_dir):
+def simplify_all_segmentations(label_dir, tolerance=0.001):
+    for fname in tqdm(os.listdir(label_dir), desc=f"Optimizing split labels"):
         if not fname.endswith('.txt'):
             continue
 
@@ -212,14 +213,14 @@ def simplify_all_segmentations(label_dir, tolerance=0.01):
             file.write('\n'.join(simplified_lines))
         
 if __name__ == "__main__":
-    #generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
-    #                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
-    #                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset", 
-    #                        5000)
+    generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
+                            "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
+                            "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset", 
+                            5000)
     
-    #convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/annotations", 
-    #                    "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/labels", 
-    #                    mode="segmentation")
+    convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/annotations", 
+                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/labels", 
+                        mode="segmentation")
 
     split_dataset({'train': 0.8, 'val': 0.1, 'test': 0.1}, 
                   'D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset',
