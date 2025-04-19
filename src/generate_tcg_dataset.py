@@ -124,14 +124,15 @@ def convert_coco_to_yolo(annotation_folder, label_folder, mode="bbox"):
             h_image = data["height_image"]
             w_image = data["width_image"]
             for ann in data["annotations"]:
+                n_class = ann["category_id"]
                 if mode == "bbox":
                     x, y, w, h = ann["bbox"]
                     x_center, y_center, w_norm, h_norm = (x + w/2)/w_image, (y + h/2)/h_image, w/w_image, h/h_image
-                    f.write(f"0 {x_center} {y_center} {w_norm} {h_norm}\n")
+                    f.write(f"{n_class} {x_center} {y_center} {w_norm} {h_norm}\n")
                 elif mode == "segmentation":
                     seg = ann["segmentation"][0]
-                    seg_str = " ".join(map(str, [v/640 if i%2==0 else v/480 for i, v in enumerate(seg)]))
-                    f.write(f"0 {seg_str}\n")
+                    seg_str = " ".join(map(str, [v/w_image if i%2==0 else v/h_image for i, v in enumerate(seg)]))
+                    f.write(f"{n_class} {seg_str}\n")
 
 def visualize_annotations(image_path, annotation_path):
     image = cv2.imread(image_path)
@@ -175,12 +176,11 @@ def split_dataset(splits, path, class_names):
         
 
 if __name__ == "__main__":
-
     generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
                             "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
                             "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset", 
-                            1300)
-
+                            5000)
+    
     convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/annotations", 
                         "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/labels", 
                         mode="segmentation")
