@@ -5,6 +5,7 @@ import numpy as np
 import json
 import uuid
 import shutil
+from shapely.geometry import Polygon
 
 
 def load_images(folder):
@@ -167,25 +168,60 @@ def split_dataset(splits, path, class_names):
             shutil.copy(os.path.join(path, 'images', names[i]), os.path.join(path, 'splited_dataset', split, 'images', names[i]))
             shutil.copy(os.path.join(path, 'labels', names[i].split('.')[0] + '.txt'), os.path.join(path, 'splited_dataset', split, 'labels', names[i].split('.')[0] + '.txt'))
         last = int(splits[split] * len(names))
+        simplify_all_segmentations(os.path.join(path, 'splited_dataset', split, 'labels'))
 
     formatted_names = "\n" + "\n".join([f"  {i}: {name}" for i, name in enumerate(class_names)])
     splits_path = "".join(splits_rows)
     yaml_file = """{}\nis_coco: False\n\n# Classes\nnames:{}""".format(splits_path, formatted_names)
     with open(os.path.join(path, 'splited_dataset','data.yaml'), 'w') as file1:
         file1.write(yaml_file)
+
+def simplify_segmentation(points, tolerance):
+    coords = np.array(points).reshape(-1, 2)
+    poly = Polygon(coords)
+
+    if not poly.is_valid or poly.is_empty:
+        return points
+
+    simplified = poly.simplify(tolerance, preserve_topology=True)
+
+    simplified_coords = np.array(simplified.exterior.coords[:-1])
+    return simplified_coords.flatten().tolist()
+
+def simplify_all_segmentations(label_dir, tolerance=0.01):
+    for fname in os.listdir(label_dir):
+        if not fname.endswith('.txt'):
+            continue
+
+        fpath = os.path.join(label_dir, fname)
+
+        with open(fpath, 'r') as file:
+            lines = file.readlines()
+
+        simplified_lines = []
+        for line in lines:
+            parts = line.strip().split()
+            cls = parts[0]
+            coords = list(map(float, parts[1:]))
+
+            simplified_coords = simplify_segmentation(coords, tolerance)
+            simplified_line = cls + ' ' + ' '.join(map(str, simplified_coords))
+            simplified_lines.append(simplified_line)
+
+        with open(fpath, 'w') as file:
+            file.write('\n'.join(simplified_lines))
         
-
 if __name__ == "__main__":
-    generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
-                            "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
-                            "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset", 
-                            5000)
+    #generate_synthetic_dataset("D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/background", 
+    #                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/images/cards", 
+    #                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset", 
+    #                        5000)
     
-    convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/annotations", 
-                        "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/labels", 
-                        mode="segmentation")
+    #convert_coco_to_yolo("D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/annotations", 
+    #                    "D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset/labels", 
+    #                    mode="segmentation")
 
-    split_dataset({'train': 0.6, 'val': 0.2, 'test': 0.2}, 
+    split_dataset({'train': 0.8, 'val': 0.1, 'test': 0.1}, 
                   'D:/Proyectos/Pokemon_TCG_Scanner/datasets/synthetic_dataset',
                   ['card'])
     
