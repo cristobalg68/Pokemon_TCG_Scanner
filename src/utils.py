@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 import imagehash
-from PIL import Image
+from PIL import Image, ImageTk
 import pandas as pd
+import tkinter as tk
 
 def read_frame(camera, size):
     ret, frame = camera.read()
@@ -21,11 +22,14 @@ def read_image(path_image, size):
 
 def process_detections(detections):
     new_detections = []
-    for segmentation in detections.masks.data:
-        det = {
-            'mask': segmentation.cpu().numpy()
-        }
-        new_detections.append(det)
+    if detections.masks != None:
+        for mask, segmentation, bbox in zip(detections.masks.data, detections.masks.xy, detections.boxes.xywh):
+            det = {
+                'bbox': bbox.cpu().numpy().astype(int),
+                'segmentation': segmentation,
+                'mask': mask.cpu().numpy()
+            }
+            new_detections.append(det)
     return new_detections
 
 def mask_to_card(image, detections):
@@ -51,7 +55,7 @@ def mask_to_card(image, detections):
                 if width > height:
                     card = cv2.rotate(card, cv2.ROTATE_90_CLOCKWISE)
 
-                card = cv2.resize(card, (320, 320))
+                #card = cv2.resize(card, (320, 320))
                 card = cv2.flip(card, 1)
 
         if card is not None:
@@ -87,9 +91,7 @@ def find_match(hash_a, df):
         card_name = min_row['Name']
         set_card_name = min_row['Set_Name']
         local_id = min_row['Local_ID']
-
         return f"{card_name} {set_card_name} {local_id}", min_row['similarity']
-
     return None, None
 
 def match_hashes(detections, df):
@@ -108,3 +110,27 @@ def match_hashes(detections, df):
                     detection['match'] = match1
                 else:
                     detection['match'] = match2
+
+def draw_boxes_and_segmentation(image, detections):
+    for detection in detections:
+        x, y, w, h = detection["bbox"]
+        segmentation = np.array(detection["segmentation"]).reshape(-1, 2)
+        #cv2.rectangle(image, (x - int(w/2), y - int(h/2)), (x + int(w/2), y + int(h/2)), (0, 255, 0), 2)
+        cv2.polylines(image, [segmentation.astype(np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
+
+def show_image(image, container):
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    img_pil = Image.fromarray(image)
+    img_tk = ImageTk.PhotoImage(img_pil)
+
+    label = tk.Label(container, image=img_tk, bg="black")
+    label.image = img_tk
+    label.pack(expand=True)
+
+    width, height = img_pil.size
+    margin = 40
+    window_width = width + margin
+    window_height = height + margin
+
+    container.master.geometry(f"{window_width}x{window_height}")
+
