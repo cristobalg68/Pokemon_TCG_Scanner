@@ -51,11 +51,11 @@ def mask_to_card(image, detections):
                 M = cv2.getPerspectiveTransform(points.astype(np.float32), dst)
 
                 card = cv2.warpPerspective(image, M, (int(width), int(height)))
-
+                
                 if width > height:
                     card = cv2.rotate(card, cv2.ROTATE_90_CLOCKWISE)
 
-                #card = cv2.resize(card, (320, 320))
+                card = cv2.resize(card, (320, 444))
                 card = cv2.flip(card, 1)
 
         if card is not None:
@@ -127,10 +127,10 @@ def show_image(image, container):
     label.image = img_tk
     label.pack(expand=True)
 
-    width, height = img_pil.size
-    margin = 40
-    window_width = width + margin
-    window_height = height + margin
+def show_live(image, video_label):
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    img_pil = Image.fromarray(image)
+    img_tk = ImageTk.PhotoImage(image=img_pil)
 
-    container.master.geometry(f"{window_width}x{window_height}")
-
+    video_label.imgtk = img_tk
+    video_label.config(image=img_tk)

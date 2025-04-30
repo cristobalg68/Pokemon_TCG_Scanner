@@ -1,5 +1,6 @@
 import cv2
 import pandas as pd
+import tkinter as tk
 
 from detector import Detector
 import utils
@@ -19,6 +20,8 @@ class Scanner():
 class ImageScanner(Scanner):
 
     def run(self, path_image, container):
+        container.master.geometry(f"680x680")
+
         img_original = utils.read_image(path_image, self.size)
         img_original_copy = img_original.copy()
         
@@ -35,41 +38,39 @@ class ImageScanner(Scanner):
 
 class VideoScanner(Scanner):
 
-    def run(self):
+    def run(self, path_video, container):
         pass
 
 class LiveScanner(Scanner):
 
-    def run(self, camera_id):
+    def run(self, camera_id, container):
+        container.master.geometry(f"680x680")
 
-        camera = cv2.VideoCapture(camera_id)
-        width = int(camera.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = float(camera.get(cv2.CAP_PROP_FPS))
+        self.camera = cv2.VideoCapture(camera_id)
+        width = int(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = float(self.camera.get(cv2.CAP_PROP_FPS))
         print("Webcam started with resolution:", width, "x", height, 'fps:', fps)
 
-        tracked_matches = {}
+        self.video_label = tk.Label(container)
+        self.video_label.pack(expand=True)
 
-        while True:
-            img_original = utils.read_frame(camera, self.size)
-            #img_original = cv2.flip(img_original, 1)
-            if img_original is None:
-                break
+        self.update_frame()
 
-            img_original_copy = img_original.copy()
+    def update_frame(self):
+        img_original = utils.read_frame(self.camera, self.size)
+        if img_original is None:
+            return
 
-            detections = self.detector.detect_objects(img_original, self.confidence, self.iou)
+        img_original_copy = img_original.copy()
 
-            detections = utils.process_detections(detections)
-            #utils.track_objects(detections, tracked_matches, self.iou)
+        detections = self.detector.detect_objects(img_original, self.confidence, self.iou)
+        detections = utils.process_detections(detections)
+        utils.mask_to_card(img_original, detections)
+        utils.hash_cards(detections, self.hash_size)
+        utils.match_hashes(detections, self.df)
+        utils.draw_boxes_and_segmentation(img_original_copy, detections)
 
-            utils.mask_to_card(img_original, detections)
-            utils.hash_cards(detections, self.hash_size)
-            utils.match_hashes(detections, self.df)
+        utils.show_live(img_original_copy, self.video_label)
 
-            utils.draw_boxes_and_segmentation(img_original_copy, detections)
-
-            utils.show_image(img_original_copy)
-
-            if cv2.waitKey(1) == ord('q'):
-                break
+        self.video_label.after(30, self.update_frame)
