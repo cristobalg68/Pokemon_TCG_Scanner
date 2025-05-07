@@ -111,12 +111,26 @@ def match_hashes(detections, df):
                 else:
                     detection['match'] = match2
 
-def draw_boxes_and_segmentation(image, tracker):
+def draw_boxes_and_segmentation(image, x, y, w, h, segmentation, bbox=False):
+    if bbox:
+        cv2.rectangle(image, (x - int(w/2), y - int(h/2)), (x + int(w/2), y + int(h/2)), (0, 255, 0), 2)
+    overlay = image.copy()
+    cv2.polylines(image, [segmentation], isClosed=True, color=(0, 0, 255), thickness=2)
+    cv2.fillPoly(overlay, [segmentation], color=(0, 0, 255))
+    alpha = 0.3
+    image[:] = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
+
+def draw(image, detections):
+    for detection in detections:
+        x, y, w, h = detection["bbox"]
+        segmentation = np.array(detection["segmentation"]).reshape(-1, 2).astype(np.int32)
+        draw_boxes_and_segmentation(image, x, y, w, h, segmentation)
+
+def draw_t(image, tracker):
     for id in tracker['matches']:
         x, y, w, h = tracker['matches'][id]["bbox"]
-        segmentation = np.array(tracker['matches'][id]["segmentation"]).reshape(-1, 2)
-        #cv2.rectangle(image, (x - int(w/2), y - int(h/2)), (x + int(w/2), y + int(h/2)), (0, 255, 0), 2)
-        cv2.polylines(image, [segmentation.astype(np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
+        segmentation = np.array(tracker['matches'][id]["segmentation"]).reshape(-1, 2).astype(np.int32)
+        draw_boxes_and_segmentation(image, x, y, w, h, segmentation)
 
 def show_image(image, container):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
