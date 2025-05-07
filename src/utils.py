@@ -111,10 +111,10 @@ def match_hashes(detections, df):
                 else:
                     detection['match'] = match2
 
-def draw_boxes_and_segmentation(image, detections):
-    for detection in detections:
-        x, y, w, h = detection["bbox"]
-        segmentation = np.array(detection["segmentation"]).reshape(-1, 2)
+def draw_boxes_and_segmentation(image, tracker):
+    for id in tracker['matches']:
+        x, y, w, h = tracker['matches'][id]["bbox"]
+        segmentation = np.array(tracker['matches'][id]["segmentation"]).reshape(-1, 2)
         #cv2.rectangle(image, (x - int(w/2), y - int(h/2)), (x + int(w/2), y + int(h/2)), (0, 255, 0), 2)
         cv2.polylines(image, [segmentation.astype(np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
 
@@ -127,10 +127,64 @@ def show_image(image, container):
     label.image = img_tk
     label.pack(expand=True)
 
-def show_live(image, video_label):
+def show_video(image, video_label):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     img_pil = Image.fromarray(image)
     img_tk = ImageTk.PhotoImage(image=img_pil)
 
     video_label.imgtk = img_tk
     video_label.config(image=img_tk)
+
+def calcular_iou(bbox1, bbox2):
+    x1_1, y1_1, x2_1, y2_1 = bbox1
+    x1_2, y1_2, x2_2, y2_2 = bbox2
+
+    xA = max(x1_1, x1_2)
+    yA = max(y1_1, y1_2)
+    xB = min(x2_1, x2_2)
+    yB = min(y2_1, y2_2)
+
+    inter_ancho = max(0, xB - xA)
+    inter_alto = max(0, yB - yA)
+    inter_area = inter_ancho * inter_alto
+
+    area1 = (x2_1 - x1_1) * (y2_1 - y1_1)
+    area2 = (x2_2 - x1_2) * (y2_2 - y1_2)
+
+    union_area = area1 + area2 - inter_area
+
+    if union_area == 0:
+        return 0.0
+
+    iou = inter_area / union_area
+    return iou
+
+def track_objects(detections, tracked_matches, threshold):
+    new_detections = []
+    new_matches = {}
+    for detection in detections:
+        x, y, w, h = detection["bbox"]
+        x1_2 = x - int(w/2)
+        y1_2 = y - int(h/2) 
+        x2_2 = x + int(w/2)
+        y2_2 = y + int(h/2)
+        for key in tracked_matches['matches']:
+            x, y, w, h = tracked_matches['matches'][key]["bbox"]
+            x1_1 = x - int(w/2) 
+            y1_1 = y - int(h/2) 
+            x2_1 = x + int(w/2)
+            y2_1 = y + int(h/2)
+            iou = calcular_iou([x1_1, y1_1, x2_1, y2_1], [x1_2, y1_2, x2_2, y2_2])
+            if iou > threshold:
+                new_matches[key] = tracked_matches['matches'][key]
+                detection['match'] = True
+        if 'match' not in detection.keys():
+            new_detections.append(detection)
+            id = str(tracked_matches['last_id'])
+            new_matches[id] = {}
+            new_matches[id]["bbox"] = detection["bbox"]
+            new_matches[id]["segmentation"] = detection["segmentation"]
+            tracked_matches['last_id'] += 1
+                
+    detections = new_detections
+    tracked_matches['matches'] = new_matches

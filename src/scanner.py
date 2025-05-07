@@ -51,6 +51,9 @@ class VideoScanner(Scanner):
         self.video_label = tk.Label(container)
         self.video_label.pack(expand=True)
 
+        self.tracker = {'last_id':0,
+                        'matches':{}}
+
         self.update_frame()
 
     def update_frame(self):
@@ -64,10 +67,11 @@ class VideoScanner(Scanner):
 
         detections = self.detector.detect_objects(img_original, self.confidence, self.iou)
         detections = utils.process_detections(detections)
+        utils.track_objects(detections, self.tracker, self.iou)
         utils.mask_to_card(img_original, detections)
         utils.hash_cards(detections, self.hash_size)
         utils.match_hashes(detections, self.df)
-        utils.draw_boxes_and_segmentation(img_original_copy, detections)
+        utils.draw_boxes_and_segmentation(img_original_copy, self.tracker)
 
         utils.show_video(img_original_copy, self.video_label)
 
@@ -87,6 +91,9 @@ class LiveScanner(Scanner):
         self.video_label = tk.Label(container)
         self.video_label.pack(expand=True)
 
+        self.tracker = {'last_id':0,
+                        'matches':{}}
+
         self.update_frame()
 
     def update_frame(self):
@@ -98,10 +105,11 @@ class LiveScanner(Scanner):
 
         detections = self.detector.detect_objects(img_original, self.confidence, self.iou)
         detections = utils.process_detections(detections)
+        utils.track_objects(detections, self.tracker, self.iou)
         utils.mask_to_card(img_original, detections)
         utils.hash_cards(detections, self.hash_size)
         utils.match_hashes(detections, self.df)
-        utils.draw_boxes_and_segmentation(img_original_copy, detections)
+        utils.draw_boxes_and_segmentation(img_original_copy, self.tracker)
 
         utils.show_video(img_original_copy, self.video_label)
 
