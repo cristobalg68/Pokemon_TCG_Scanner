@@ -89,7 +89,7 @@ def draw_boxes_and_segmentation(image, x, y, w, h, segmentation, bbox=False):
     overlay = image.copy()
     cv2.polylines(image, [segmentation], isClosed=True, color=(0, 0, 255), thickness=2)
     cv2.fillPoly(overlay, [segmentation], color=(0, 0, 255))
-    cv2.addWeighted(overlay, 0.3, image, 0.7, 0, dst=image)
+    cv2.addWeighted(overlay, 0.2, image, 0.8, 0, dst=image)
 
 def draw(image, detections):
     for detection in detections:
