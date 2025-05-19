@@ -7,19 +7,20 @@ path_weights = "weights/best_1.pt"
 path_df = "D:/Proyectos/Pokemon_TCG_Scanner/datasets/cards_of_pokemon.xlsx"
 hash_size = 16
 size = 640
-confidence = 0.8
-iou = 0.5
+confidence = 0.9
+iou = 0.8
 
 FONT = ("Arial", 12)
+
 ext_file = {
     "1":("Image File", r"*.png *.jpg *.jpge"),
-    "2":("Video File", r"*.mp4 *.avi")
+    "2":("Video File", r"*.mp4 *.avi *.mov")
             }
 
 default_file_ext = {
     "1": ".png",
-    "2": ".mp4",
-    "3": ".mp4"
+    "2": ".avi",
+    "3": ".avi"
 }
 
 class GUI:
@@ -175,4 +176,4 @@ if __name__ == "__main__":
     root.mainloop()
 
 
-# 'C:/Users/Cristobal/Desktop/test.jpg' / '' / 'http://192.168.1.28:4747/video'
+# 'C:/Users/Cristobal/Desktop/test.jpg' / '' / 'http://192.168.1.11:4747/video'
