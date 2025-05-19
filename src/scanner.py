@@ -46,6 +46,7 @@ class VideoScanner(Scanner):
         container.master.geometry(f"680x680")
 
         self.video = cv2.VideoCapture(path_video)
+        self.video_size = (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         self.container = container
 
         if not self.video.isOpened():
@@ -57,6 +58,12 @@ class VideoScanner(Scanner):
 
         self.tracker = {'last_id':0,
                         'matches':{}}
+        
+        if self.save:
+            self.writer = cv2.VideoWriter(self.path_saved,
+                                          cv2.VideoWriter_fourcc(*'MJPG'),
+                                          self.video.get(cv2.CAP_PROP_FPS),
+                                          self.video_size)
 
         self.update_frame()
 
@@ -64,6 +71,8 @@ class VideoScanner(Scanner):
         ret, img_original = self.video.read()
         if not ret:
             print("End of video.")
+            if self.save:
+                self.writer.release()
             return
 
         img_original = cv2.resize(img_original, (self.size, self.size))
@@ -79,6 +88,9 @@ class VideoScanner(Scanner):
 
         utils.show_video(img_original_copy, self.video_label)
 
+        if self.save:
+            self.writer.write(cv2.resize(img_original_copy, self.video_size))
+
         self.video_label.after(10, self.update_frame)
 
 class LiveScanner(Scanner):
@@ -92,17 +104,28 @@ class LiveScanner(Scanner):
         fps = float(self.camera.get(cv2.CAP_PROP_FPS))
         print("Webcam started with resolution:", width, "x", height, 'fps:', fps)
 
+        self.video_size = (width, height)
+
         self.video_label = tk.Label(container)
         self.video_label.pack(expand=True)
 
         self.tracker = {'last_id':0,
                         'matches':{}}
+        
+        if self.save:
+            self.writer = cv2.VideoWriter(self.path_saved,
+                                          cv2.VideoWriter_fourcc(*'MJPG'),
+                                          fps,
+                                          self.video_size)
 
         self.update_frame()
 
     def update_frame(self):
         img_original = utils.read_frame(self.camera, self.size)
         if img_original is None:
+            self.camera.release()
+            if self.save:
+                self.writer.release()
             return
 
         img_original_copy = img_original.copy()
@@ -116,5 +139,8 @@ class LiveScanner(Scanner):
         utils.draw_t(img_original_copy, self.tracker)
 
         utils.show_video(img_original_copy, self.video_label)
+
+        if self.save:
+            self.writer.write(cv2.resize(img_original_copy, self.video_size))
 
         self.video_label.after(10, self.update_frame)
