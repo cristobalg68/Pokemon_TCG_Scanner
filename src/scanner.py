@@ -14,6 +14,7 @@ class Scanner():
         self.iou = iou
         self.hash_size = hash_size
         self.df = pd.read_excel(path_df).dropna(subset=['hash'])
+        self.df = self.df[self.df['Set_ID'].str.startswith('sv')]
         self.save = save
         self.path_saved = path
 
@@ -33,6 +34,9 @@ class ImageScanner(Scanner):
         utils.match_hashes(detections, self.df)
 
         utils.draw(img_original_copy, detections)
+
+        if self.save:
+            cv2.imwrite(self.path_saved, img_original_copy)
 
         utils.show_image(img_original_copy, container)
 
@@ -68,9 +72,9 @@ class VideoScanner(Scanner):
         detections = self.detector.detect_objects(img_original, self.confidence, self.iou)
         detections = utils.process_detections(detections)
         utils.track_objects(detections, self.tracker, self.iou)
-        #utils.mask_to_card(img_original, detections)
-        #utils.hash_cards(detections, self.hash_size)
-        #utils.match_hashes(detections, self.df)
+        utils.mask_to_card(img_original, detections)
+        utils.hash_cards(detections, self.hash_size)
+        utils.match_hashes(detections, self.df)
         utils.draw_t(img_original_copy, self.tracker)
 
         utils.show_video(img_original_copy, self.video_label)
