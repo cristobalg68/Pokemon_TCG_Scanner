@@ -49,7 +49,7 @@ def mask_to_card(image, detections):
                 card = cv2.warpPerspective(image, M, (int(width), int(height)))
                 if width > height:
                     card = cv2.rotate(card, cv2.ROTATE_90_CLOCKWISE)
-                det['card_image'] = cv2.flip(cv2.resize(card, (320, 444)), 1)
+                det['card_image'] = cv2.resize(card, (600, 825))
                 break
 
 def hash_image(img, hash_size):
@@ -66,11 +66,11 @@ def hash_cards(detections, hash_size):
 def hamming_distance(h1, h2):
     return sum(a != b for a, b in zip(h1, h2))
 
-def find_match(h, df, threshold=14*6.8):
+def find_match(h, df, threshold=15*6.8):  #14*6.8
     df['similarity'] = df['hash'].apply(lambda x: hamming_distance(x, h))
     min_row = df.loc[df['similarity'].idxmin()]
     if min_row['similarity'] < threshold:
-        return f"{min_row['Name']} {min_row['Set_Name']} {min_row['Local_ID']}", min_row['similarity']
+        return f"{min_row['Name']}\n{min_row['Set_Name']}\n{min_row['Local_ID']}", min_row['similarity']
     return None, None
 
 def match_hashes(detections, df):
@@ -79,9 +79,9 @@ def match_hashes(detections, df):
             match1, sim1 = find_match(det['hash'], df)
             match2, sim2 = find_match(det['hash_flipped'], df)
             if match1 and (not match2 or sim1 <= sim2):
-                det['match'] = match1
+                det['match_card'] = match1
             elif match2:
-                det['match'] = match2
+                det['match_card'] = match2
 
 def draw_boxes_and_segmentation(image, x, y, w, h, segmentation, bbox=False):
     if bbox:
@@ -91,17 +91,33 @@ def draw_boxes_and_segmentation(image, x, y, w, h, segmentation, bbox=False):
     cv2.fillPoly(overlay, [segmentation], color=(0, 0, 255))
     cv2.addWeighted(overlay, 0.2, image, 0.8, 0, dst=image)
 
+def draw_label(image, x, y, w, label):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale = 0.24
+    color = (0, 255, 0)
+    thickness = 1
+    dy = 10
+    x = x - (w // 2) + 2
+    y = y + 20
+    for i, line in enumerate(label.split('\n')):
+        y0 = y + i*dy
+        cv2.putText(image, line, (x, y0), font, fontScale, color, thickness, cv2.LINE_AA)
+
 def draw(image, detections):
     for detection in detections:
         x, y, w, h = detection["bbox"]
         segmentation = np.array(detection["segmentation"]).reshape(-1, 2).astype(np.int32)
         draw_boxes_and_segmentation(image, x, y, w, h, segmentation)
+        if 'match_card' in detection.keys():
+            draw_label(image, x, y, w, detection["match_card"])
 
 def draw_t(image, tracker):
     for id in tracker['matches']:
         x, y, w, h = tracker['matches'][id]["bbox"]
         segmentation = np.array(tracker['matches'][id]["segmentation"]).reshape(-1, 2).astype(np.int32)
         draw_boxes_and_segmentation(image, x, y, w, h, segmentation)
+        if 'match_card' in tracker['matches'][id].keys():
+            draw_label(image, x, y, w, tracker['matches'][id]["match_card"])
 
 def show_image(image, container):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -169,6 +185,8 @@ def track_objects(detections, tracked_matches, threshold):
             new_matches[id] = {}
             new_matches[id]["bbox"] = detection["bbox"]
             new_matches[id]["segmentation"] = detection["segmentation"]
+            if 'match_card' in detection.keys():
+                new_matches[id]["match_card"] = detection["match_card"]
             tracked_matches['last_id'] += 1
                 
     detections = new_detections
