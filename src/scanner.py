@@ -46,8 +46,16 @@ class VideoScanner(Scanner):
         container.master.geometry(f"680x680")
 
         self.video = cv2.VideoCapture(path_video)
-        self.video_size = (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        
         self.container = container
+
+        r = self.video.get(cv2.CAP_PROP_ORIENTATION_META)
+        if r == 90.0 or r == 270.0:
+            self.video_size = (int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)))
+        else:
+            self.video_size = (int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+
+        self.video.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1.0)
 
         if not self.video.isOpened():
             print(f"Could not open the video: {path_video}")
@@ -105,6 +113,14 @@ class LiveScanner(Scanner):
         print("Webcam started with resolution:", width, "x", height, 'fps:', fps)
 
         self.video_size = (width, height)
+
+        r = self.video.get(cv2.CAP_PROP_ORIENTATION_META)
+        if r == 90.0 or r == 270.0:
+            self.video_size = (height, width)
+        else:
+            self.video_size = (width, height)
+
+        self.video.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1.0)
 
         self.video_label = tk.Label(container)
         self.video_label.pack(expand=True)
