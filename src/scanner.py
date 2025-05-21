@@ -80,10 +80,10 @@ class VideoScanner(Scanner):
 
         detections = self.detector.detect_objects(img_original, self.confidence, self.iou)
         detections = utils.process_detections(detections)
-        utils.track_objects(detections, self.tracker, self.iou)
         utils.mask_to_card(img_original, detections)
         utils.hash_cards(detections, self.hash_size)
         utils.match_hashes(detections, self.df)
+        utils.track_objects(detections, self.tracker, self.iou)
         utils.draw_t(img_original_copy, self.tracker)
 
         utils.show_video(img_original_copy, self.video_label)
@@ -132,10 +132,10 @@ class LiveScanner(Scanner):
 
         detections = self.detector.detect_objects(img_original, self.confidence, self.iou)
         detections = utils.process_detections(detections)
-        utils.track_objects(detections, self.tracker, self.iou)
         utils.mask_to_card(img_original, detections)
         utils.hash_cards(detections, self.hash_size)
         utils.match_hashes(detections, self.df)
+        utils.track_objects(detections, self.tracker, self.iou)
         utils.draw_t(img_original_copy, self.tracker)
 
         utils.show_video(img_original_copy, self.video_label)
